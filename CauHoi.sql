@@ -11,6 +11,12 @@ returns varchar(1000)
 DETERMINISTIC
 begin
     declare result VARCHAR(1000);
+    declare customer_exists INT;
+    
+     select COUNT(*) INTO customer_exists FROM customers WHERE id = id_customer;
+	if customer_exists = 0 THEN
+        return 'Khách hàng không tồn tại.';
+    end if;
 
     select GROUP_CONCAT(CONCAT(menu.name, order_items.quantity))
     into result
@@ -33,30 +39,39 @@ select get_menu(2);
 -- procedure lay ten mon an theo nguyen lieu nha cung cap(truyen vao id ncc)
 DELIMITER $$
 
-CREATE PROCEDURE get_menu_NL (IN id_sup INT)
+create procedure get_menu_NL (IN id_sup INT)
 begin 
     declare menu_count INT;
+    declare supplier_exists INT;
+    
+	select COUNT(*) into supplier_exists from suppliers where id = id_sup;
 
-    select COUNT(menu.id) into menu_count
-    from menu
-    join menu_ingredients ON menu.id = menu_ingredients.menu_id
-    join inventory ON menu_ingredients.inventory_id = inventory.id
-    where inventory.supplier_id = id_sup;
-
-    IF menu_count = 0 then
-        select 'Không có món ăn nào' AS message;
+    if supplier_exists = 0 THEN
+        select 'Nhà cung cấp không tồn tại.' AS message;
     else
-        select menu.name 
-        from menu
-        join menu_ingredients ON menu.id = menu_ingredients.menu_id
-        join inventory ON menu_ingredients.inventory_id = inventory.id
-        where inventory.supplier_id = id_sup;
+
+		select COUNT(menu.id) into menu_count
+		from menu
+		join menu_ingredients ON menu.id = menu_ingredients.menu_id
+		join inventory ON menu_ingredients.inventory_id = inventory.id
+		where inventory.supplier_id = id_sup;
+
+		IF menu_count = 0 then
+			select 'Không có món ăn nào' AS message;
+		else
+			select menu.name 
+			from menu
+			join menu_ingredients ON menu.id = menu_ingredients.menu_id
+			join inventory ON menu_ingredients.inventory_id = inventory.id
+			where inventory.supplier_id = id_sup;
+		end if;
+	
     end if;
 end $$
 
 DELIMITER ;
 
-call get_menu_NL(21);
+call get_menu_NL(1);
 
 -- lay ra don dat ban nhung chua den
 select  reservations.id, customers.name, tables.table_number, reservations.reservation_date, reservations.status
