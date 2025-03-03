@@ -3,38 +3,39 @@ select * from menu where price = (select max(price) from menu);
 -- lay ra teen khach hang co trang thai thanh toan
 select customers.id , customers.name, orders.payment_status from customers join orders on customers.id = orders.customer_id
 where orders.payment_status = 'paid';
--- function ten mon an, so luong mon an theo khach ma khach hang 
-delimiter $$
+-- function so luong mon an theo khach ma khach hang 
+DELIMITER $$
 
-create function get_menu(id_customer INT)
-returns varchar(1000)
+create function get_total_ordered(id_customer INT)
+returns VARCHAR(255)
 DETERMINISTIC
 begin
-    declare result VARCHAR(1000);
-    declare customer_exists INT;
-    
-     select COUNT(*) INTO customer_exists FROM customers WHERE id = id_customer;
-	if customer_exists = 0 THEN
+    DECLARE total_items INT;
+    DECLARE customer_exists INT;
+
+    select COUNT(*) into customer_exists from customers where id = id_customer;
+
+    if customer_exists = 0 THEN
         return 'Khách hàng không tồn tại.';
-    end if;
-
-    select GROUP_CONCAT(CONCAT(menu.name, order_items.quantity))
-    into result
-    from menu
-    join order_items ON menu.id = order_items.menu_id
-    join orders ON order_items.order_id = orders.id
-    where orders.customer_id = id_customer;
-
-    if result IS NULL THEN
-        return 'Khách hàng này chưa gọi món nào.';
     else
-        return result;
+
+        select SUM(order_items.quantity) into total_items
+        from orders
+        join order_items ON orders.id = order_items.order_id
+        where orders.customer_id = id_customer;
+
+        if total_items IS NULL THEN
+            return 'Khách hàng chưa gọi món nào.';
+        else
+            return total_items;
+        end if;
     end if;
 end $$
 
-delimiter ;
+DELIMITER ;
 
-select get_menu(2);
+
+select get_total_ordered(1);
 
 -- procedure lay ten mon an theo nguyen lieu nha cung cap(truyen vao id ncc)
 DELIMITER $$
@@ -44,19 +45,19 @@ begin
     declare menu_count INT;
     declare supplier_exists INT;
     
-	select COUNT(*) into supplier_exists from suppliers where id = id_sup;
+	select count(*) into supplier_exists from suppliers where id = id_sup;
 
     if supplier_exists = 0 THEN
         select 'Nhà cung cấp không tồn tại.' AS message;
     else
 
-		select COUNT(menu.id) into menu_count
+		select count(menu.id) into menu_count
 		from menu
 		join menu_ingredients ON menu.id = menu_ingredients.menu_id
 		join inventory ON menu_ingredients.inventory_id = inventory.id
 		where inventory.supplier_id = id_sup;
 
-		IF menu_count = 0 then
+		if menu_count = 0 then
 			select 'Không có món ăn nào' AS message;
 		else
 			select menu.name 
